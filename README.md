@@ -68,3 +68,22 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+Below is the firebase rules are for registered user, admin and support.
+its doesnt allow anyone without login to access the data.
+
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection - allow authenticated users to read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Messages collection - allow read/write if user is authenticated
+    match /messages/{messageId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
