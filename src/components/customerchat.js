@@ -1,54 +1,307 @@
-import {useState, useEffect} from "react";
-import { db } from "../config/firebase"; 
-import {collection, query, where, orderBy, onSnapshot, addDoc, getDocs} from "firebase/firestore";
-import {v4 as uuidv4} from "uuid";
+// import { useState, useEffect } from "react";
+// import { db } from "../config/firebase";
+// import { collection, query, where, doc, getDoc, setDoc, getDocs, updateDoc, onSnapshot } from "firebase/firestore";
+// import { v4 as uuidv4 } from "uuid";
+
+// const CustomerChat = () => {
+//     const [customerId, setCustomerId] = useState(localStorage.getItem("customerId") || uuidv4());
+//     const [supportAgents, setSupportAgents] = useState([]);
+//     const [selectedSupport, setSelectedSupport] = useState(null);
+//     const [messages, setMessages] = useState([]);
+//     const [newMessage, setNewMessage] = useState("");
+
+//     useEffect(() => {
+//         localStorage.setItem("customerId", customerId);
+
+//         const fetchSupportAgents = async () => {
+//             const supportRef = collection(db, "users");
+//             const q = query(supportRef, where("role", "in", ["support", "admin"]));
+//             const snapshot = await getDocs(q);
+//             const agents = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+//             if (agents.length > 0) {
+//                 setSupportAgents(agents);
+//                 setSelectedSupport(agents[0]);
+//             }
+//         };
+//         fetchSupportAgents();
+//     }, [customerId]);
+
+//     useEffect(() => {
+//         if (!selectedSupport) return;
+
+//         const chatId = `${customerId}_${selectedSupport.id}`;
+//         const chatRef = doc(db, "chats", chatId);
+
+//         const unsubscribe = onSnapshot(chatRef, (snapshot) => {
+//             if (snapshot.exists()) {
+//                 setMessages(snapshot.data().messages || []);
+//             } else {
+//                 setMessages([]);
+//             }
+//         });
+
+//         return () => unsubscribe();
+//     }, [selectedSupport, customerId]);
+
+//     const handleSend = async () => {
+//         if (!newMessage.trim() || !selectedSupport) return;
+
+//         const chatId = `${customerId}_${selectedSupport.id}`;
+//         const chatRef = doc(db, "chats", chatId);
+//         const newMsg = { senderId: customerId, text: newMessage, timestamp: new Date() };
+
+//         try {
+//             const chatSnap = await getDoc(chatRef);
+
+//             if (chatSnap.exists()) {
+//                 await updateDoc(chatRef, {
+//                     messages: [...chatSnap.data().messages, newMsg],
+//                 });
+//             } else {
+//                 await setDoc(chatRef, {
+//                     participants: [customerId, selectedSupport.id],
+//                     messages: [newMsg],
+//                 });
+//             }
+
+//             setNewMessage("");
+//         } catch (error) {
+//             console.error("Firestore Write Error:", error);
+//         }
+//     };
+
+//     return (
+//         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+//             <h2>Customer Support Chat</h2>
+//             <div>
+//             </div>
+//             <div style={{ width: "50%", height: "400px", overflowY: "auto", border: "1px solid #ccc", padding: "10px", margin: "10px 0" }}>
+//                 {messages.map((msg, index) => (
+//                     <p key={index} style={{ background: msg.senderId === customerId ? "#d1e7dd" : "#f8d7da", padding: "8px", borderRadius: "5px", marginBottom: "5px" }}>
+//                         <strong>{msg.senderId === customerId ? "You" : "Support"}:</strong> {msg.text}
+//                     </p>
+//                 ))}
+//             </div>
+//             <input style={{ width: "40%", padding: "8px", marginBottom: "10px" }} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
+//             <button onClick={handleSend} style={{ padding: "8px 16px", cursor: "pointer" }}>Send</button>
+//         </div>
+//     );
+// };
+
+// export default CustomerChat;
+
+
+// import { useState, useEffect } from "react";
+// import { db } from "../config/firebase";
+// import {
+//     collection,
+//     query,
+//     where,
+//     doc,
+//     getDoc,
+//     setDoc,
+//     getDocs,
+//     updateDoc,
+//     onSnapshot,
+// } from "firebase/firestore";
+// import { v4 as uuidv4 } from "uuid";
+
+// const CustomerChat = () => {
+//     const [customerId, setCustomerId] = useState(localStorage.getItem("customerId") || uuidv4());
+//     const [selectedSupport, setSelectedSupport] = useState(null);
+//     const [messages, setMessages] = useState([]);
+//     const [newMessage, setNewMessage] = useState("");
+//     const [chatStarted, setChatStarted] = useState(false);
+
+//     useEffect(() => {
+//         localStorage.setItem("customerId", customerId);
+//     }, [customerId]);
+
+//     const initiateChat = async () => {
+//         const supportRef = collection(db, "users");
+//         console.log("support avaliable",supportRef);
+//         // Fetch available online support agents first
+//         let q = query(supportRef, where("role", "==", "support"), where("isOnline", "==", true));
+//         console.log("q",q); 
+//         let snapshot = await getDocs(q);
+//         let agents = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+//         console.log("agents",agents);   
+//         // If no online support agents are found, select an admin
+//         if (agents.length === 0) {
+//             q = query(supportRef, where("role", "==", "admin"));
+//             snapshot = await getDocs(q);
+//             agents = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+//         }
+
+//         if (agents.length > 0) {
+//             const chosenSupport = agents[0];
+//             setSelectedSupport(chosenSupport);
+//             setChatStarted(true);
+
+//             // Notify the support agent that a new chat has started
+//             const supportRef = doc(db, "users", chosenSupport.id);
+//             await updateDoc(supportRef, {
+//                 activeChats: [...(chosenSupport.activeChats || []), customerId],
+//             });
+//         }
+//     };
+
+//     useEffect(() => {
+//         if (!selectedSupport) return;
+
+//         const chatId = `${customerId}_${selectedSupport.id}`;
+//         const chatRef = doc(db, "chats", chatId);
+
+//         // Listen for messages in real-time
+//         const unsubscribe = onSnapshot(chatRef, (snapshot) => {
+//             if (snapshot.exists()) {
+//                 setMessages(snapshot.data().messages || []);
+//             } else {
+//                 setMessages([]);
+//             }
+//         });
+
+//         return () => unsubscribe();
+//     }, [selectedSupport, customerId]);
+
+//     const handleSend = async () => {
+//         if (!newMessage.trim() || !selectedSupport) return;
+
+//         const chatId = `${customerId}_${selectedSupport.id}`;
+//         const chatRef = doc(db, "chats", chatId);
+//         const newMsg = {
+//             senderId: customerId,
+//             text: newMessage,
+//             timestamp: new Date(),
+//         };
+
+//         try {
+//             const chatSnap = await getDoc(chatRef);
+
+//             if (chatSnap.exists()) {
+//                 await updateDoc(chatRef, {
+//                     messages: [...chatSnap.data().messages, newMsg],
+//                 });
+//             } else {
+//                 await setDoc(chatRef, {
+//                     participants: [customerId, selectedSupport.id],
+//                     messages: [newMsg],
+//                 });
+//             }
+
+//             setNewMessage("");
+//         } catch (error) {
+//             console.error("Firestore Write Error:", error);
+//         }
+//     };
+
+//     return (
+//         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+//             <h2>Customer Support Chat</h2>
+
+//             {!chatStarted ? (
+//                 <button onClick={initiateChat} style={{ padding: "10px 20px", cursor: "pointer", marginBottom: "20px" }}>
+//                     Chat with Us
+//                 </button>
+//             ) : (
+//                 <>
+//                     <div style={{ width: "50%", height: "400px", overflowY: "auto", border: "1px solid #ccc", padding: "10px", margin: "10px 0" }}>
+//                         {messages.map((msg, index) => (
+//                             <p
+//                                 key={index}
+//                                 style={{
+//                                     background: msg.senderId === customerId ? "#d1e7dd" : "#f8d7da",
+//                                     padding: "8px",
+//                                     borderRadius: "5px",
+//                                     marginBottom: "5px",
+//                                 }}
+//                             >
+//                                 <strong>{msg.senderId === customerId ? "You" : "Support"}:</strong> {msg.text}
+//                             </p>
+//                         ))}
+//                     </div>
+//                     <input
+//                         style={{ width: "50%", padding: "8px", marginBottom: "10px" }}
+//                         value={newMessage}
+//                         onChange={(e) => setNewMessage(e.target.value)}
+//                     />
+//                     <button onClick={handleSend} style={{ padding: "8px 16px", cursor: "pointer" }}>Send</button>
+//                 </>
+//             )}
+//         </div>
+//     );
+// };
+
+// export default CustomerChat;    
+
+
+import { useState, useEffect } from "react";
+import { db } from "../config/firebase";
+import {
+    collection,
+    query,
+    where,
+    doc,
+    getDoc,
+    setDoc,
+    getDocs,
+    updateDoc,
+    onSnapshot,
+} from "firebase/firestore";
+import { v4 as uuidv4 } from "uuid";
 
 const CustomerChat = () => {
     const [customerId, setCustomerId] = useState(localStorage.getItem("customerId") || uuidv4());
-    const [supportAgents, setSupportAgents] = useState([]);
     const [selectedSupport, setSelectedSupport] = useState(null);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
+    const [chatStarted, setChatStarted] = useState(false);
 
     useEffect(() => {
-        // Save customerId in localStorage
         localStorage.setItem("customerId", customerId);
+    }, [customerId]);
 
-        // Fetch available support agents
-        const fetchSupportAgents = async () => {
-            const supportRef = collection(db, "users"); // Assuming support agents are stored here
-            const q = query(supportRef, where("role", "==", "support")); // Filtering only support agents
-            const snapshot = await getDocs(q);
-            const agents = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+    const initiateChat = async () => {
+        const supportRef = collection(db, "users");
+        let q = query(supportRef, where("role", "==", "support"), where("isOnline", "==", true));
+        let snapshot = await getDocs(q);
+        let agents = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        
+        if (agents.length === 0) {
+            q = query(supportRef, where("role", "==", "admin"));
+            snapshot = await getDocs(q);
+            agents = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        }
 
-            setSupportAgents(agents);
-            console.log("support agents",agents);    
-            // Select the first available support agent
-            if (agents.length > 0) {
-                setSelectedSupport(agents[0]);
-            } else {
-                // If no support agents, assign to an admin
-                const adminRef = query(supportRef, where("role", "==", "admin"));
-                const adminSnapshot = await getDocs(adminRef);
-                const admins = adminSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
-                if (admins.length > 0) {
-                    setSelectedSupport(admins[0]);
-                }
+        if (agents.length > 0) {
+            const chosenSupport = agents[0];
+            setSelectedSupport(chosenSupport);
+            setChatStarted(true);
+
+            const supportDocRef = doc(db, "users", chosenSupport.id);
+            let activeChats = chosenSupport.activeChats || [];
+            
+            // Ensure activeChats is unique
+            if (!activeChats.includes(customerId)) {
+                await updateDoc(supportDocRef, {
+                    activeChats: [...activeChats, customerId],
+                });
             }
-        };
-        fetchSupportAgents();
-    }, []);
+        }
+    };
 
     useEffect(() => {
         if (!selectedSupport) return;
-
-        // Fetch chat messages
         const chatId = `${customerId}_${selectedSupport.id}`;
-        const messagesRef = collection(db, "messages");
-        const q = query(messagesRef, where("chatId", "==", chatId), orderBy("timestamp"));
+        const chatRef = doc(db, "chats", chatId);
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setMessages(snapshot.docs.map((doc) => doc.data()));
+        const unsubscribe = onSnapshot(chatRef, (snapshot) => {
+            if (snapshot.exists()) {
+                setMessages(snapshot.data().messages || []);
+            } else {
+                setMessages([]);
+            }
         });
 
         return () => unsubscribe();
@@ -56,43 +309,67 @@ const CustomerChat = () => {
 
     const handleSend = async () => {
         if (!newMessage.trim() || !selectedSupport) return;
-
         const chatId = `${customerId}_${selectedSupport.id}`;
+        const chatRef = doc(db, "chats", chatId);
+        const newMsg = {
+            senderId: customerId,
+            text: newMessage,
+            timestamp: new Date(),
+        };
 
         try {
-            await addDoc(collection(db, "messages"), {
-                chatId,
-                senderId: customerId,
-                receiverId: selectedSupport.id,
-                message: newMessage,
-                timestamp: new Date(),
-            });
+            const chatSnap = await getDoc(chatRef);
+            if (chatSnap.exists()) {
+                await updateDoc(chatRef, {
+                    messages: [...chatSnap.data().messages, newMsg],
+                });
+            } else {
+                await setDoc(chatRef, {
+                    participants: [customerId, selectedSupport.id],
+                    messages: [newMsg],
+                });
+            }
             setNewMessage("");
         } catch (error) {
             console.error("Firestore Write Error:", error);
         }
     };
 
+    const handleEndChat = async () => {
+        if (!selectedSupport) return;
+        const supportDocRef = doc(db, "users", selectedSupport.id);
+        let activeChats = selectedSupport.activeChats || [];
+        
+        // Remove customerId from activeChats
+        activeChats = activeChats.filter(id => id !== customerId);
+        await updateDoc(supportDocRef, { activeChats });
+
+        setSelectedSupport(null);
+        setChatStarted(false);
+        setMessages([]);
+    };
+
     return (
-        <div style={{padding: "20px", maxWidth: "400px", border: "1px solid #ddd"}}>
-            <h3>Chat with Support</h3>
-            <div style={{height: "300px", overflowY: "auto", border: "1px solid #ddd", padding: "10px"}}>
-                {messages.map((msg, index) => (
-                    <p key={index} style={{textAlign: msg.senderId === customerId ? "right" : "left"}}>
-                        <strong>{msg.senderId === customerId ? "You" : "Support"}:</strong> {msg.message}
-                    </p>
-                ))}
-            </div>
-            <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-                style={{width: "100%", padding: "8px", marginTop: "10px"}}
-            />
-            <button onClick={handleSend} style={{width: "100%", marginTop: "5px", padding: "8px"}}>
-                Send
-            </button>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+            <h2>Customer Support Chat</h2>
+            {!chatStarted ? (
+                <button onClick={initiateChat} style={{ padding: "10px 20px", cursor: "pointer", marginBottom: "20px" }}>
+                    Chat with Us
+                </button>
+            ) : (
+                <>
+                    <div style={{ width: "50%", height: "400px", overflowY: "auto", border: "1px solid #ccc", padding: "10px", margin: "10px 0" }}>
+                        {messages.map((msg, index) => (
+                            <p key={index} style={{ background: msg.senderId === customerId ? "#d1e7dd" : "#f8d7da", padding: "8px", borderRadius: "5px", marginBottom: "5px" }}>
+                                <strong>{msg.senderId === customerId ? "You" : "Support"}:</strong> {msg.text}
+                            </p>
+                        ))}
+                    </div>
+                    <input style={{ width: "50%", padding: "8px", marginBottom: "10px" }} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
+                    <button onClick={handleSend} style={{ padding: "8px 16px", cursor: "pointer", marginRight: "10px" }}>Send</button>
+                    <button onClick={handleEndChat} style={{ padding: "8px 16px", cursor: "pointer", backgroundColor: "red", color: "white" }}>End Chat</button>
+                </>
+            )}
         </div>
     );
 };
