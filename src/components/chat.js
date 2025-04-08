@@ -189,7 +189,7 @@ import {
   updateDoc,
   doc,
   arrayUnion,
-  // getDoc,
+  getDoc,
   orderBy,
   addDoc
 } from "firebase/firestore";
@@ -197,6 +197,7 @@ import {
 const Chat = ({ userType, loggedInUserId }) => {
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [activeChatId, setActiveChatId] = useState(null);
   const [unsubscribeChat, setUnsubscribeChat] = useState(null);
@@ -241,21 +242,101 @@ const Chat = ({ userType, loggedInUserId }) => {
   
     return () => unsubscribe();
   }, [loggedInUserId]);
+
+  // const selectChat = async (chatId) => {
+  //   setActiveChatId(chatId);
+  //   if (unsubscribeChat) unsubscribeChat();
+
+  //   const messagesRef = collection(db, "messages");
+  //   const q = query(messagesRef, where("chatId", "==", chatId), orderBy("timestamp", "asc"));
+  //   console.log("Query:", q);
+  //   const unsubscribe = onSnapshot(q, (snapshot) => {
+  //     setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  //     console.log("Messages:!!!", messages); 
+  //   });
+
+  //   setUnsubscribeChat(() => unsubscribe);
+  // };
+
+  // const selectChat = async (chatId) => {
+  //   setActiveChatId(chatId);
+  //   if (unsubscribeChat) unsubscribeChat();
   
+  //   const messagesRef = collection(db, "messages");
+  //   const q = query(messagesRef, where("chatId", "==", chatId), orderBy("timestamp", "asc"));
+  //   console.log("Query:", q);
+  
+  //   const unsubscribe = onSnapshot(q, async (snapshot) => {
+  //     const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+  //     // Fetch sender details for each message
+  //     const senderIds = [...new Set(messages.map(msg => msg.senderId))];
+  //     const senderDetails = {};
+  //     console.log("Sender IDs:", senderIds);
+  //     for (const senderId of senderIds) {
+  //       const userDoc = await getDoc(doc(db, "users", senderId));
+  //       console.log("User Doc:", userDoc.data());
+  //       if (userDoc.exists()) {
+  //         senderDetails[senderId] = userDoc.data().email || "Unknown";
+  //       } else {
+  //         senderDetails[senderId] = "Unknown";
+  //       }
+  //     }
+  
+  //     // Now map sender name to each message
+  //     const updatedMessages = messages.map(msg => ({
+  //       ...msg,
+  //       senderName: senderDetails[msg.senderId] || "Customer",
+  //     }));
+  
+  //     setMessages(updatedMessages);
+  //     console.log("Updated Messages:", updatedMessages);
+  //   });
+  
+  //   setUnsubscribeChat(() => unsubscribe);
+  // };
+
+
   const selectChat = async (chatId) => {
-    setActiveChatId(chatId);
-    if (unsubscribeChat) unsubscribeChat();
+  setActiveChatId(chatId);
+  setLoading(true); // Start loading when chat is selected
+  if (unsubscribeChat) unsubscribeChat();
 
-    const messagesRef = collection(db, "messages");
-    const q = query(messagesRef, where("chatId", "==", chatId), orderBy("timestamp", "asc"));
+  const messagesRef = collection(db, "messages");
+  const q = query(messagesRef, where("chatId", "==", chatId), orderBy("timestamp", "asc"));
+  console.log("Query:", q);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+  const unsubscribe = onSnapshot(q, async (snapshot) => {
+    const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    setUnsubscribeChat(() => unsubscribe);
-  };
+    // Fetch sender details for each message
+    const senderIds = [...new Set(messages.map(msg => msg.senderId))];
+    const senderDetails = {};
+    console.log("Sender IDs:", senderIds);
+    for (const senderId of senderIds) {
+      const userDoc = await getDoc(doc(db, "users", senderId));
+      console.log("User Doc:", userDoc.data());
+      if (userDoc.exists()) {
+        senderDetails[senderId] = userDoc.data().email || "Unknown";
+      } else {
+        senderDetails[senderId] = "Unknown";
+      }
+    }
 
+    // Now map sender name to each message
+    const updatedMessages = messages.map(msg => ({
+      ...msg,
+      senderName: senderDetails[msg.senderId] || "Customer",
+    }));
+
+    setMessages(updatedMessages);
+    setLoading(false); // Stop loading when messages are set
+    console.log("Updated Messages:", updatedMessages);
+  });
+
+  setUnsubscribeChat(() => unsubscribe);
+};
+  
   const handleSend = async () => {
     if (!newMessage.trim() || !loggedInUserId || !activeChatId) return;
 
@@ -280,8 +361,21 @@ const Chat = ({ userType, loggedInUserId }) => {
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "Arial, sans-serif" }}>
-      <div style={{ width: "30%", padding: "10px", borderRight: "1px solid #ccc", overflowY: "auto" }}>
+    <div
+      style={{
+        display: "flex",
+        height: "100vh",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <div
+        style={{
+          width: "30%",
+          padding: "10px",
+          borderRight: "1px solid #ccc",
+          overflowY: "auto",
+        }}
+      >
         <h3>Chats</h3>
         {chats.map((chat) => (
           <div
@@ -293,9 +387,8 @@ const Chat = ({ userType, loggedInUserId }) => {
               backgroundColor: activeChatId === chat.id ? "#4CAF50" : "#ddd",
               color: activeChatId === chat.id ? "#fff" : "#000",
               marginBottom: "5px",
-            }}
-          >
-          Chat with {chat.customerId || "Unknown"}
+            }}>
+            Chat with {chat.customerId || "Unknown"}
           </div>
         ))}
       </div>
@@ -304,12 +397,29 @@ const Chat = ({ userType, loggedInUserId }) => {
         {activeChatId ? (
           <>
             <h3>Chat</h3>
-            <div style={{ height: "60vh", overflowY: "auto", border: "1px solid #ddd", padding: "10px", marginBottom: "10px" }}>
-              {messages.map((msg, index) => (
+            {/* <div
+              style={{ height: "60vh", overflowY: "auto", border: "1px solid #ddd", padding: "10px", marginBottom: "10px"}}>
+              {/* {messages.map((msg, index) => (
                 <p key={index} style={{ textAlign: msg.senderId === loggedInUserId ? "right" : "left" }}>
                   <strong>{msg.senderId === loggedInUserId ? "You" : "Customer"}:</strong> {msg.text}
                 </p>
+              ))} */}
+              {/* {messages.map((msg, index) => (
+                <p key={index} style={{ textAlign: msg.senderId === loggedInUserId ? "right" : "left" }}>
+                  <strong>{msg.senderId === loggedInUserId ? "You" : msg.senderName}:</strong> {msg.text}
+                </p>
               ))}
+            </div> */}
+            <div style={{ width: "75%", height: "270px", overflowY: "auto", border: "1px solid #ccc", padding: "10px", margin: "10px 0" }}>
+                {loading ? (
+                  <div>Loading...</div> // Show loading when chat is loading
+                ) : (
+                  messages.map((msg, index) => (
+                    <p key={index} style={{ textAlign: msg.senderId === loggedInUserId ? "right" : "left" }}>
+                      <strong>{msg.senderId === loggedInUserId ? "You" : msg.senderName}:</strong> {msg.text}
+                    </p>
+                  ))
+                )}
             </div>
             <input
               type="text"
@@ -318,7 +428,12 @@ const Chat = ({ userType, loggedInUserId }) => {
               placeholder="Type a message..."
               style={{ width: "80%", padding: "8px" }}
             />
-            <button onClick={handleSend} style={{ width: "18%", marginLeft: "2%", padding: "8px" }}>Send</button>
+            <button
+              onClick={handleSend}
+              style={{ width: "18%", marginLeft: "2%", padding: "8px" }}
+            >
+              Send
+            </button>
           </>
         ) : (
           <p>Select a chat to start messaging</p>
